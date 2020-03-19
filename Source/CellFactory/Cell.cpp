@@ -51,16 +51,9 @@ UTexture2D * ACellActor::GenerateTexture(ELense lense) const
 				break;
 			case ELense::Age:
 			{
-				auto depth = FMath::Abs((IndexToCell(j / 4).Y - (gSize.Y / 2)) / float((gSize.Y / 2)));
-				auto time = time_ticks / 1000.f;
-				auto photot = (FMath::Abs(FMath::Cos(time) + FMath::Sin(time * 4) / 2.f) * 1.5f * (1 - depth)) + 0.3f;
-				auto chemenergy = depth * 1.f * FMath::Abs(FMath::Cos(1.5f + time));
-				chemenergy += FMath::Clamp((10000.f - LastUpdated) / 10000.f, 0.f, 1.f);
-				chemenergy = FMath::Clamp(chemenergy, 0.f, 1.f);
-				photot = FMath::Clamp(photot, 0.f, 1.f);
-				pData[j] = chemenergy * 255;// *0.5f * 3.f + 1.f * 51; //B
-				pData[j + 1] = photot * 255; //G
-				pData[j + 2] = photot * 255; //R
+				pData[j] = GetChemo(IndexToCell(j / 4).Y) * 127;// *0.5f * 3.f + 1.f * 51; //B
+				pData[j + 1] = GetLight(IndexToCell(j / 4).Y) * 127; //G
+				pData[j + 2] = GetLight(IndexToCell(j / 4).Y) * 127; //R
 			}
 			break;
 			case ELense::Genome:
@@ -117,9 +110,21 @@ void ACellActor::Mutate(UCell * ncell)
 	}
 }
 
-void ACellActor::GetChemo(int32 depth)
+float ACellActor::GetTime() const
 {
+	return time_ticks / 1000.f;
+}
 
+float ACellActor::GetLight(int32 depth) const
+{
+	return (FMath::Abs((FMath::Cos(GetTime()) + FMath::Sin(GetTime() * 4) + 2) / 4.f) * 2.f * (1 - (depth / float(gSize.Y))));
+}
+
+float ACellActor::GetChemo(int32 depth) const
+{
+	auto chemenergy = (depth / float(gSize.Y)) * 0.3f;
+	chemenergy += FMath::Clamp((17000.f - LastUpdated) / 17000.f, 0.f, 1.f);
+	return chemenergy;
 }
 
 void ACellActor::Tick(float DeltaSeconds)
@@ -128,22 +133,17 @@ void ACellActor::Tick(float DeltaSeconds)
 
 	//auto tick1 = FPlatformTime::Seconds();
 
-	for (int32 iter = 0; iter < 25; ++iter)
+	for (int32 iter = 0; iter < 5; ++iter)
 	{
 		++time_ticks;
-		auto time = time_ticks / 1000.f;
 
 		mArray[0] = nullptr;
 		auto updated = 0;
 
 		for (int32 j = 0; j < gSize.Y; ++j)
 		{
-			auto depth = FMath::Abs((j - (gSize.Y / 2)) / float((gSize.Y / 2)));
-			auto photoenergy = (FMath::Abs(FMath::Cos(time) + FMath::Sin(time * 4) / 2.f) * 1.5f * (1 - depth));
-			auto chemenergy = depth * 1.f * FMath::Abs(FMath::Cos(1.5f + time));
-			chemenergy += FMath::Clamp((10000.f - LastUpdated) / 10000.f, 0.f, 1.f);
-			//photoenergy *= (30000.f - LastUpdated) / 30000.f;
-			//chemenergy *= (30000.f - LastUpdated) / 30000.f;
+			auto photoenergy = GetLight(j);
+			auto chemenergy = GetChemo(j);
 			for (int32 i = 0; i < gSize.X; ++i)
 			{
 				auto self_index = CellToIndex({ i, j });
@@ -206,26 +206,32 @@ void ACellActor::Tick(float DeltaSeconds)
 
 						case uint8(EGene::Mitose):
 						{
-							auto rot = FVector2D(1, 0).GetRotated(cell->Rotation + param1 * 360);
-							auto irot = Vec2i(FMath::RoundFromZero(rot.X), FMath::RoundFromZero(rot.Y));
-							auto n_index = CellToIndex({ i - irot.X, j - irot.Y });
-
-							if (mArray[n_index] == nullptr && cell->Energy > 1)
+							if(cell->Age > 10)
 							{
-								auto ncell = NewObject<UCell>(this);
-								ncell->Genome = cell->Genome;
+								auto rot = FVector2D(1, 0).GetRotated(cell->Rotation + param1 * 360);
+								auto irot = Vec2i(FMath::RoundFromZero(rot.X), FMath::RoundFromZero(rot.Y));
+								auto n_index = CellToIndex({ i - irot.X, j - irot.Y });
 
-								if (rstream.RandRange(0, cell->Age) > 100 * cell->Genome.Num())
+								if (mArray[n_index] == nullptr && cell->Energy > 1)
 								{
-									Mutate(ncell);
-									Mutate(cell);
+									auto ncell = NewObject<UCell>(this);
+									ncell->Genome = cell->Genome;
+
+									if (rstream.RandRange(0, 100) == 1)
+									{
+										Mutate(ncell);
+									}
+									if (rstream.RandRange(0, 100) == 1)
+									{
+										Mutate(cell);
+									}
+									ncell->Speed = ncell->Speed;
+									ncell->Rotation = cell->Rotation + param1 * 360;
+									ncell->Energy = cell->Energy * param2 * 0.8;
+									mArray[n_index] = ncell;
+									cell->Energy = cell->Energy * (1 - param2) * 0.8;
+									cell->Age = 0;
 								}
-								ncell->Speed = ncell->Speed;
-								ncell->Rotation = cell->Rotation + param1 * 360;
-								ncell->Energy = cell->Energy * param2 * 0.8;
-								mArray[n_index] = ncell;
-								cell->Energy = cell->Energy * (1 - param2) * 0.8;
-								cell->Age = 0;
 							}
 
 							cell->Counter += 3;
@@ -365,9 +371,10 @@ void ACellActor::Tick(float DeltaSeconds)
 
 					double_jump:
 
-						if (rstream.RandRange(0, cell->Age) > 200 * cell->Genome.Num())
+						if (rstream.RandRange(0, cell->Age) > 300 * cell->Genome.Num())
 						{
 							Mutate(cell);
+							cell->Age /= 2.f;
 						}
 
 						if (cell->accumulated_delta.X > 1)

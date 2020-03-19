@@ -404,7 +404,7 @@ inline constexpr Vec2i IndexToCell(IndexType i, const Vec2i &size = gSize)
 inline constexpr IndexType CellToIndex(const Vec2i &_pos, const Vec2i &size = gSize)
 {
 	auto pos = _pos;
-	if (pos.X >= size.X)
+	/*if (pos.X >= size.X)
 	{
 		pos.X = pos.X - size.X;
 	}
@@ -419,6 +419,23 @@ inline constexpr IndexType CellToIndex(const Vec2i &_pos, const Vec2i &size = gS
 	if (pos.Y < 0)
 	{
 		pos.Y = pos.Y + size.Y;
+	}*/
+
+	if (pos.X >= size.X)
+	{
+		pos.X = pos.X - size.X;
+	}
+	if (pos.Y >= size.Y)
+	{
+		pos.Y = size.Y - 1;
+	}
+	if (pos.X < 0)
+	{
+		pos.X = pos.X + size.X;
+	}
+	if (pos.Y < 0)
+	{
+		pos.Y = 0;
 	}
 
 	return static_cast<IndexType>(pos.X) * size.Y +
@@ -458,6 +475,9 @@ public:
 
 	void Mutate(UCell *);
 
+	float GetTime() const;
+	float GetLight(int32 depth) const;
+	float GetChemo(int32 depth) const;
 	UPROPERTY()
 		TArray<UCell *> mArray;
 
