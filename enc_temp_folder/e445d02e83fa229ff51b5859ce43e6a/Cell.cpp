@@ -473,8 +473,7 @@ void ACellActor::Tick(float DeltaSeconds)
 					}
 					else
 					{
-						cell.Energy *= .99f;
-						cell.Energy -= 0.1f;
+						cell.Energy -= 3.f;
 					}
 
 					if (cell.Energy < 1)

@@ -7,208 +7,16 @@
 #include "Math/Vector.h"
 #include <limits>
 #include <Templates/Function.h>
+#include <array>
 #include "Cell.generated.h"
 
-struct FVector2i;
-
-USTRUCT(BlueprintType)
-struct FVector3i
-{
-	GENERATED_BODY()
-
-public:
-
-	UPROPERTY(BlueprintReadWrite, Category = Default)
-		int32 X;
-
-	UPROPERTY(BlueprintReadWrite, Category = Default)
-		int32 Y;
-
-	UPROPERTY(BlueprintReadWrite, Category = Default)
-		int32 Z;
-
-public:
-
-	FVector3i() : X(0), Y(0), Z(0)
-	{
-	}
-
-	static FVector3i Zero()
-	{
-		return { 0,0,0 };
-	}
-
-	constexpr FVector3i Abs()
-	{
-		return FVector3i(FMath::Abs(X), FMath::Abs(Y), FMath::Abs(Z));
-	}
-
-	constexpr FVector3i(int32 inX, int32 inY, int32 inZ)
-		: X(inX), Y(inY), Z(inZ)
-	{}
-
-	constexpr explicit FVector3i(int32 value)
-		: X(value), Y(value), Z(value)
-	{}
-
-	constexpr explicit FVector3i(EForceInit)
-		: X(0), Y(0), Z(0)
-	{}
-
-	constexpr FVector3i(const FVector3i &other)
-		: X(other.X), Y(other.Y), Z(other.Z)
-	{}
-
-	constexpr FVector3i(const FVector2i &other, int32 z);
-
-	constexpr FVector3i(FVector3i &&other)
-		: X(other.X), Y(other.Y), Z(other.Z)
-	{}
-
-	FVector3i(const FVector &other)
-		: X(static_cast<int32>(other.X)), Y(static_cast<int32>(other.Y)), Z(static_cast<int32>(other.Z))
-	{}
-
-	FVector3i &operator=(const FVector3i &other)
-	{
-		X = other.X;
-		Y = other.Y;
-		Z = other.Z;
-
-		return *this;
-	}
-
-	FVector3i &operator=(FVector3i &&other)
-	{
-		X = other.X;
-		Y = other.Y;
-		Z = other.Z;
-
-		return *this;
-	}
-
-public:
-
-	~FVector3i() = default;
-
-public:
-
-	constexpr bool operator==(const FVector3i& other) const
-	{
-		return X == other.X && Y == other.Y && Z == other.Z;
-	}
-	constexpr bool operator!=(const FVector3i& other) const
-	{
-		return X != other.X || Y != other.Y || Z != other.Z;
-	}
-	constexpr FVector3i operator*(int32 scale) const
-	{
-		return FVector3i(X * scale, Y * scale, Z * scale);
-	}
-	constexpr FVector3i operator*(const FVector3i& other) const
-	{
-		return FVector3i(X * other.X, Y * other.Y, Z * other.Z);
-	}
-	constexpr FVector3i operator/(int32 divisor) const
-	{
-		return FVector3i(X / divisor, Y / divisor, Z / divisor);
-	}
-	constexpr FVector3i operator/(const FVector3i& other) const
-	{
-		return FVector3i(X / other.X, Y / other.Y, Z / other.Z);
-	}
-	constexpr FVector3i operator+(const FVector3i& other) const
-	{
-		return FVector3i(X + other.X, Y + other.Y, Z + other.Z);
-	}
-	constexpr FVector3i operator-(const FVector3i& other) const
-	{
-		return FVector3i(X - other.X, Y - other.Y, Z - other.Z);
-	}
-	constexpr FVector3i operator-() const
-	{
-		return FVector3i(-X, -Y, -Z);
-	}
-	constexpr FVector3i operator+(int32 value) const
-	{
-		return FVector3i(X + value, Y + value, Z + value);
-	}
-	constexpr FVector3i operator-(int32 value) const
-	{
-		return FVector3i(X - value, Y - value, Z - value);
-	}
-	constexpr FVector3i operator%(int32 value) const
-	{
-		return FVector3i(X % value, Y % value, Z % value);
-	}
-	constexpr FVector3i operator&(int32 value) const
-	{
-		return FVector3i(X & value, Y & value, Z & value);
-	}
-	constexpr FVector3i operator&(const FVector3i & value) const
-	{
-		return FVector3i(X & value.X, Y & value.Y, Z & value.Y);
-	}
-	constexpr FVector3i operator|(int32 value) const
-	{
-		return FVector3i(X | value, Y | value, Z | value);
-	}
-	constexpr FVector3i operator|(const FVector3i & value) const
-	{
-		return FVector3i(X | value.X, Y | value.Y, Z | value.Y);
-	}
-
-	constexpr bool operator<(const FVector3i &other) const
-	{
-		return X != other.X ? X < other.X : (Y != other.Y ? Y < other.Y : Z < other.Z);
-	}
-
-	//   FVector3i& operator*=(int32 scale);
-	//   FVector3i& operator/=(int32 divisor);
-	//   FVector3i& operator+=(const FVector3i& other);
-	//   FVector3i& operator-=(const FVector3i& other);
-	//   FVector3i& operator=(const FVector3i& other);
-
-	constexpr bool IsZero() const
-	{
-		return X == 0 && Y == 0 && Z == 0;
-	}
-
-	constexpr int32 Capacity() const
-	{
-		return FMath::Abs(X * Y * Z);
-	}
-
-public:
-
-	operator FIntVector() const
-	{
-		return FIntVector(X, Y, Z);
-	}
-
-	friend FORCEINLINE uint32 GetTypeHash(const FVector3i& FVector3i)
-	{
-		return FCrc::MemCrc_DEPRECATED(&FVector3i, sizeof(FVector3i));
-	}
-};
-
-inline FVector3i RoundToInt(const FVector &val)
-{
-	return FVector3i{ FMath::RoundToInt(val.X), FMath::RoundToInt(val.Y) , FMath::RoundToInt(val.Z) };
-}
-
-USTRUCT(BlueprintType)
 struct FVector2i
 {
-	GENERATED_USTRUCT_BODY()
 
 public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Default)
-		int32 X;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Default)
-		int32 Y;
+	int32 X;
+	int32 Y;
 
 public:
 
@@ -220,11 +28,6 @@ public:
 	constexpr FVector2i(int32 inX, int32 inY)
 		: X(inX)
 		, Y(inY)
-	{}
-
-	explicit constexpr FVector2i(FVector3i value)
-		: X(value.X)
-		, Y(value.Y)
 	{}
 
 	constexpr explicit FVector2i(int32 value)
@@ -351,20 +154,18 @@ public:
 	}
 };
 
-constexpr FVector3i::FVector3i(const FVector2i &other, int32 z)
-	: X(other.X), Y(other.Y), Z(z)
-{}
-
-
-using Vec3f = FVector;
-using Vec3i = FVector3i;
 using Vec2i = FVector2i;
-using IndexType = int32;
 
-constexpr Vec2i gSize = FVector2i(256, 256);
+constexpr FVector2i gSize = FVector2i(256, 256);
+constexpr uint32 gGenomeSize = 64;
+using GeneType = uint8;
+using AgeType = uint16;
 
-UENUM(BlueprintType)		
-enum class EGene : uint8
+using RotationType = uint8;
+constexpr RotationType gRotationsCount = 8;
+constexpr std::array<Vec2i, gRotationsCount> gRotations = { Vec2i(0, 1),  Vec2i(1, 1), Vec2i(1, 0), Vec2i(1, -1), Vec2i(0, -1), Vec2i(-1, -1), Vec2i(-1, 0), Vec2i(-1, 1) };
+
+enum EGene : GeneType
 {
 	Trash,
 	MoveForward,
@@ -382,7 +183,7 @@ enum class EGene : uint8
 	Regen,
 	Counter,
 	DetectFriend,
-	DetectOther,
+	//DetectOther,
 	DetectEnergy,
 	EGene_MAX,
 };
@@ -393,15 +194,16 @@ enum class ELense : uint8
 	Energy,
 	Age,
 	Genome,
+	Feed,
 };
 
-inline constexpr Vec2i IndexToCell(IndexType i, const Vec2i &size = gSize)
+inline constexpr Vec2i IndexToCell(int32 i, const Vec2i &size = gSize)
 {
-	return Vec2i{ static_cast<IndexType>(i / size.Y),
-		static_cast<IndexType>(i % size.Y) };
+	return Vec2i{ static_cast<int32>(i / size.Y),
+		static_cast<int32>(i % size.Y) };
 }
 
-inline constexpr IndexType CellToIndex(const Vec2i &_pos, const Vec2i &size = gSize)
+inline constexpr int32 CellToIndex(const Vec2i &_pos, const Vec2i &size = gSize)
 {
 	auto pos = _pos;
 	/*if (pos.X >= size.X)
@@ -438,30 +240,37 @@ inline constexpr IndexType CellToIndex(const Vec2i &_pos, const Vec2i &size = gS
 		pos.Y = 0;
 	}
 
-	return static_cast<IndexType>(pos.X) * size.Y +
-		static_cast<IndexType>(pos.Y);
+	return static_cast<int32>(pos.X) * size.Y +
+		static_cast<int32>(pos.Y);
 }
 
-UCLASS()
-class CELLFACTORY_API UCell : public UObject
+class Cell
 {
-	GENERATED_BODY()
 
 public:
 
-	TArray<uint8> Genome;
+	std::array<uint8, gGenomeSize> Genome;
 
-	float Rotation = 0;
+	RotationType Rotation = 0;
 	FVector2D Speed = {};
 	float Energy = 0;
-	int32 Counter = 0;
-	int32 Age = 0;
+	uint16 Counter = 0;
+	uint16 Age = 0;
+	uint16 GenomeSum = 0;
+	uint8 GeneDeviation = 0;
+	uint8 FeedType = 0;
 
 	FVector2D accumulated_delta;
 
-	bool IsFriend(const UCell * other) const;
-	bool IsOther(const UCell * other) const;
+	bool IsFriend(const Cell & other) const;
+	bool IsOther(const Cell & other) const;
+	bool IsDead() const;
+	void Kill();
+	bool IsEmpty() const;
+	void SetGenome(std::array<uint8, gGenomeSize> arr);
 };
+
+static std::array<Cell, gSize.Capacity()> mArray;
 
 UCLASS()
 class CELLFACTORY_API ACellActor : public AActor
@@ -473,16 +282,38 @@ public:
 	UFUNCTION(BlueprintCallable)
 		UTexture2D * GenerateTexture(ELense lense) const;
 
-	void Mutate(UCell *);
+	void Mutate(Cell & cell, bool rehash);
 
 	float GetTime() const;
 	float GetLight(int32 depth) const;
 	float GetChemo(int32 depth) const;
-	UPROPERTY()
-		TArray<UCell *> mArray;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 		int32 LastUpdated = 0;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+		int32 TickUpdated = 0;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+		float TickDuration = 0.f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float SunMin = 4;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float SunMax = 10;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MinMax = 3;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MinMin = 0;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float Acceleration = 25;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MutationRatio = 1;
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -495,6 +326,6 @@ protected:
 	double max = std::numeric_limits<double>::min(), min = std::numeric_limits<double>::max();
 
 	FRandomStream rstream;
-	
-	int32 time_ticks = 0;
+
+	uint64 time_ticks = 0;
 };
