@@ -93,10 +93,6 @@ void ACellActor::Mutate(Cell & cell, bool rehash)
 	{
 		cell.SetGenome(cell.Genome);
 	}
-	else
-	{
-		++cell.GeneDeviation;
-	}
 }
 
 float ACellActor::GetTime() const
@@ -140,9 +136,6 @@ void ACellActor::Tick(float DeltaSeconds)
 				{
 					auto & cell = mArray[self_index];
 
-					cell.accumulated_delta += cell.Speed;
-					cell.Speed *= 0.9;
-
 					if (!cell.IsDead())
 					{
 						++updated;
@@ -167,10 +160,14 @@ void ACellActor::Tick(float DeltaSeconds)
 						{
 						case EGene::MoveForward:
 						{
-							auto nvec = FVector2D(gRotations[cell.Rotation % 8].X, gRotations[cell.Rotation % 8].Y) * param1 * 10;
-							cell.Speed += nvec;
-							cell.Energy -= nvec.Size();
-							cell.Counter += 1;
+							cell.Energy -= 0.5;
+							cell.Counter += 2;
+
+							auto new_index = CellToIndex(Vec2i(i, j) + gRotations[i_param1 % gRotationsCount]);
+							std::swap(mArray[self_index], mArray[new_index]);
+
+							self_index = new_index;
+							cell = mArray[new_index];
 						}
 						break;
 
@@ -201,7 +198,7 @@ void ACellActor::Tick(float DeltaSeconds)
 						{
 							if (cell.Age > 10)
 							{
-								auto npos = Vec2i(i, j) + gRotations[cell.Rotation % 8];
+								auto npos = Vec2i(i, j) + gRotations[i_param1 % gRotationsCount];
 								auto n_index = CellToIndex(npos);
 								if (mArray[n_index].IsEmpty())
 								{
@@ -218,11 +215,9 @@ void ACellActor::Tick(float DeltaSeconds)
 										{
 											Mutate(cell, true);
 										}
-										ncell.Speed = ncell.Speed;
-										ncell.Rotation = cell.Rotation + i_param1;
-										ncell.Energy = cell.Energy * param2 * 0.5;
+										ncell.Energy = cell.Energy * 0.5;
 										mArray[n_index] = ncell;
-										cell.Energy = cell.Energy * (1 - param2) * 0.5;
+										cell.Energy = cell.Energy * 0.5;
 										cell.Age = 0;
 										ncell.Age = 0;
 									}
@@ -233,34 +228,16 @@ void ACellActor::Tick(float DeltaSeconds)
 						}
 						break;
 
-						case EGene::RotateCW:
-						{
-							cell.Rotation += param1 * 360;
-							cell.Energy -= param1 * 0.1;
-
-							cell.Counter += 2;
-						}
-						break;
-
-						case EGene::RotateCCW:
-						{
-							cell.Rotation -= param1 * 360;
-							cell.Energy -= param1 * 0.1;
-
-							cell.Counter += 2;
-						}
-						break;
-
 						case EGene::GiveEnergy:
 						{
-							auto npos = Vec2i(i, j) + gRotations[cell.Rotation % 8];
+							auto npos = Vec2i(i, j) + gRotations[i_param1 % gRotationsCount];
 							auto n_index = CellToIndex(npos);
 							if (!mArray[n_index].IsEmpty() && n_index != self_index)
 							{
 								auto ncell = mArray[n_index];
 
-								ncell.Energy += cell.Energy * param2 * 0.75;
-								cell.Energy -= cell.Energy * param2;
+								ncell.Energy += cell.Energy * 0.5f;
+								cell.Energy -= cell.Energy * 0.5f;
 								cell.FeedType = 3;
 							}
 
@@ -279,7 +256,7 @@ void ACellActor::Tick(float DeltaSeconds)
 
 						case EGene::TakeEnergy:
 						{
-							auto npos = Vec2i(i, j) + gRotations[cell.Rotation % 8];
+							auto npos = Vec2i(i, j) + gRotations[i_param1 % gRotationsCount];
 							auto n_index = CellToIndex(npos);
 							if (!mArray[n_index].IsEmpty() && n_index != self_index)
 							{
@@ -289,21 +266,21 @@ void ACellActor::Tick(float DeltaSeconds)
 								{
 									if (cell.IsFriend(ncell))
 									{
-										cell.Energy += ncell.Energy * param2 * 0.75f;
+										cell.Energy += ncell.Energy * 0.5f * 0.75f;
 										cell.FeedType = 3;
 									}
 									else
 									{
-										cell.Energy += ncell.Energy * param2 * 20.f;
+										cell.Energy += ncell.Energy * 0.5f;
 										cell.FeedType = 4;
 									}
 								}
 								else
 								{
-									cell.Energy += ncell.Energy * param2 * 10.f;
+									cell.Energy += ncell.Energy * 0.5f;
 									cell.FeedType = 5;
 								}
-								ncell.Energy -= ncell.Energy * param2;
+								ncell.Energy -= ncell.Energy * 0.5f;
 							}
 
 							cell.Counter += 3;
@@ -312,7 +289,7 @@ void ACellActor::Tick(float DeltaSeconds)
 
 						case EGene::DetectFriend:
 						{
-							auto npos = Vec2i(i, j) + gRotations[cell.Rotation % 8];
+							auto npos = Vec2i(i, j) + gRotations[i_param1 % gRotationsCount];
 							auto n_index = CellToIndex(npos);
 							if (!mArray[n_index].IsEmpty() && n_index != self_index)
 							{
@@ -390,91 +367,27 @@ void ACellActor::Tick(float DeltaSeconds)
 							++cell.Counter;
 						}
 
-						if (rstream.RandRange(0, cell.Age) > 10000)
+						if (rstream.RandRange(0, cell.Age) > 1000)
 						{
 							Mutate(cell, true);
 							cell.Age = 0;
 						}
 
-						if (cell.accumulated_delta.X > 1)
-						{
-							auto n_index = CellToIndex({ i + 1, j });
-							if (mArray[n_index].IsEmpty())
-							{
-								cell.accumulated_delta.X -= 1;
-								std::swap(mArray[self_index], mArray[n_index]);
-							}
-							else
-							{
-								//mArray[n_index]->Speed += cell->Speed * 0.8f;
-								//cell.Speed = {};
-								cell.accumulated_delta = {};
-								cell.Speed /= 2.f;
-							}
-						}
-						else if (cell.accumulated_delta.X < -1)
-						{
-							auto n_index = CellToIndex({ i - 1, j });
-							if (mArray[n_index].IsEmpty())
-							{
-								cell.accumulated_delta.X += 1;
-								std::swap(mArray[self_index], mArray[n_index]);
-							}
-							else
-							{
-								//mArray[n_index]->Speed += cell->Speed * 0.8f;
-								//cell.Speed = {};
-								cell.accumulated_delta = {};
-								cell.Speed /= 2.f;
-							}
-						}
-						else if (cell.accumulated_delta.Y < -1)
-						{
-							auto n_index = CellToIndex({ i, j - 1 });
-							if (mArray[n_index].IsEmpty())
-							{
-								cell.accumulated_delta.Y += 1;
-								std::swap(mArray[self_index], mArray[n_index]);
-							}
-							else
-							{
-								//mArray[n_index]->Speed += cell->Speed * 0.8f;
-								//cell.Speed = {};
-								cell.accumulated_delta = {};
-								cell.Speed /= 2.f;
-							}
-						}
-						else if (cell.accumulated_delta.Y > 1)
-						{
-							auto n_index = CellToIndex({ i, j + 1 });
-							if (mArray[n_index].IsEmpty())
-							{
-								cell.accumulated_delta.Y -= 1;
-								std::swap(mArray[self_index], mArray[n_index]);
-							}
-							else
-							{
-								//cell.Speed = {};
-								cell.accumulated_delta = {};
-								cell.Speed /= 2.f;
-							}
-						}
-
 						cell.Age += 1;
 
-						if (cell.Energy > 100 && rstream.RandHelper(100) == 1)
-						{
-							//cell.Energy = 110;
-							cell.Genome[0] = EGene::Death;
-							//Mutate(cell, false);
-						}
+						//if (cell.Energy > 100 && rstream.RandHelper(100) == 1)
+						//{
+						//	//cell.Energy = 110;
+						//	cell.Genome[0] = EGene::Death;
+						//	//Mutate(cell, false);
+						//}
 
 						cell.Energy -= 0.5f;
 					}
 					else
 					{
 						cell.Energy *= .99f;
-						cell.Energy -= 0.1f;
+						cell.Energy -= 0.01f;
 					}
 
 					if (cell.Energy < 1)
@@ -517,8 +430,6 @@ void ACellActor::Repopulate()
 
 	for (int i = 0; i < gSize.Capacity(); ++i)
 	{
-		mArray[i].Speed = FVector2D(0);
-		mArray[i].Rotation = 0;
 		mArray[i].Genome[0] = EGene::Death;
 		mArray[i].Age = 0;
 		mArray[i].Energy = -1;
@@ -541,8 +452,6 @@ void ACellActor::Repopulate()
 	for (int32 i = 0; i < 10000; ++i)
 	{
 		Cell ncell;
-		ncell.Speed = { rstream.GetFraction(),rstream.GetFraction() };
-		ncell.Rotation = rstream.RandHelper(std::numeric_limits<GeneType>::max());
 		ncell.Energy = rstream.GetFraction() * 100;
 
 		for (int g = 0; g <gGenomeSize; ++g)
@@ -579,11 +488,8 @@ bool Cell::IsDead() const
 void Cell::Kill()
 {
 	Genome[0] = EGene::Death;
-	Speed = FVector2D(0);
 	accumulated_delta = {};
-	Rotation = 0;
 	GenomeSum = 0;
-	GeneDeviation = 0;
 }
 
 bool Cell::IsEmpty() const

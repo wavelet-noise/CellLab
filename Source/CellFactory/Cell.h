@@ -162,16 +162,14 @@ using GeneType = uint8;
 using AgeType = uint16;
 
 using RotationType = uint8;
-constexpr RotationType gRotationsCount = 8;
-constexpr std::array<Vec2i, gRotationsCount> gRotations = { Vec2i(0, 1),  Vec2i(1, 1), Vec2i(1, 0), Vec2i(1, -1), Vec2i(0, -1), Vec2i(-1, -1), Vec2i(-1, 0), Vec2i(-1, 1) };
+constexpr RotationType gRotationsCount = 4;
+constexpr std::array<Vec2i, gRotationsCount> gRotations = { Vec2i(0, 1), Vec2i(1, 0), Vec2i(0, -1), Vec2i(-1, 0) };
 
 enum EGene : GeneType
 {
 	Trash,
 	MoveForward,
 	MoveBackward,
-	RotateCCW,
-	RotateCW,
 	Photo,
 	Chemo,
 	Death,
@@ -229,11 +227,11 @@ inline constexpr int32 CellToIndex(const Vec2i &_pos, const Vec2i &size = gSize)
 	}
 	if (pos.Y >= size.Y)
 	{
-		pos.Y = size.Y - 1;
+		pos.X = pos.Y - size.Y;
 	}
 	if (pos.X < 0)
 	{
-		pos.X = pos.X + size.X;
+		pos.X = 0;
 	}
 	if (pos.Y < 0)
 	{
@@ -251,13 +249,10 @@ public:
 
 	std::array<uint8, gGenomeSize> Genome;
 
-	RotationType Rotation = 0;
-	FVector2D Speed = {};
 	float Energy = 0;
 	uint16 Counter = 0;
 	uint16 Age = 0;
 	uint16 GenomeSum = 0;
-	uint8 GeneDeviation = 0;
 	uint8 FeedType = 0;
 
 	FVector2D accumulated_delta;
