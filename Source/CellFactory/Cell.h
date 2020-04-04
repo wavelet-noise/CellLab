@@ -223,11 +223,11 @@ inline constexpr int32 CellToIndex(const Vec2i &_pos, const Vec2i &size = gSize)
 
 	if (pos.X >= size.X)
 	{
-		pos.X = pos.X - size.X;
+		pos.X = size.X - 1;
 	}
 	if (pos.Y >= size.Y)
 	{
-		pos.X = pos.Y - size.Y;
+		pos.X = size.Y - 1;
 	}
 	if (pos.X < 0)
 	{

@@ -164,10 +164,13 @@ void ACellActor::Tick(float DeltaSeconds)
 							cell.Counter += 2;
 
 							auto new_index = CellToIndex(Vec2i(i, j) + gRotations[i_param1 % gRotationsCount]);
-							std::swap(mArray[self_index], mArray[new_index]);
+							if (mArray[self_index].IsEmpty())
+							{
+								std::swap(mArray[self_index], mArray[new_index]);
 
-							self_index = new_index;
-							cell = mArray[new_index];
+								self_index = new_index;
+								cell = mArray[new_index];
+							}
 						}
 						break;
 
@@ -196,7 +199,7 @@ void ACellActor::Tick(float DeltaSeconds)
 
 						case EGene::Mitose:
 						{
-							if (cell.Age > 10)
+							if (cell.Age > 0)
 							{
 								auto npos = Vec2i(i, j) + gRotations[i_param1 % gRotationsCount];
 								auto n_index = CellToIndex(npos);
@@ -206,15 +209,8 @@ void ACellActor::Tick(float DeltaSeconds)
 									{
 										auto & ncell = mArray[n_index];
 										ncell.SetGenome(cell.Genome);
-
-										if (rstream.RandRange(0, 10 * MutationRatio) == 1)
-										{
-											Mutate(ncell, true);
-										}
-										if (rstream.RandRange(0, 10 * MutationRatio) == 1)
-										{
-											Mutate(cell, true);
-										}
+										
+										Mutate(ncell, true);
 										ncell.Energy = cell.Energy * 0.5;
 										mArray[n_index] = ncell;
 										cell.Energy = cell.Energy * 0.5;
@@ -367,7 +363,7 @@ void ACellActor::Tick(float DeltaSeconds)
 							++cell.Counter;
 						}
 
-						if (rstream.RandRange(0, cell.Age) > 1000)
+						if (cell.Age > 100000 * param1)
 						{
 							Mutate(cell, true);
 							cell.Age = 0;
@@ -382,13 +378,14 @@ void ACellActor::Tick(float DeltaSeconds)
 						//	//Mutate(cell, false);
 						//}
 
-						cell.Energy -= 0.5f;
+						cell.Energy -= 0.005f;
 					}
 					else
 					{
-						cell.Energy *= .99f;
 						cell.Energy -= 0.01f;
 					}
+
+					cell.Energy *= .9f;
 
 					if (cell.Energy < 1)
 					{
