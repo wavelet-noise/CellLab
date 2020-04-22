@@ -190,7 +190,7 @@ UENUM(BlueprintType)
 enum class ELense : uint8
 {
 	Energy,
-	Age,
+	Light,
 	Genome,
 	Feed,
 };
@@ -223,7 +223,7 @@ inline constexpr int32 CellToIndex(const Vec2i &_pos, const Vec2i &size = gSize)
 
 	if (pos.X >= size.X)
 	{
-		pos.X = size.X - 1;
+		pos.X = pos.X - size.X;
 	}
 	if (pos.Y >= size.Y)
 	{
@@ -231,7 +231,7 @@ inline constexpr int32 CellToIndex(const Vec2i &_pos, const Vec2i &size = gSize)
 	}
 	if (pos.X < 0)
 	{
-		pos.X = 0;
+		pos.X = pos.X + size.X;
 	}
 	if (pos.Y < 0)
 	{
@@ -254,6 +254,7 @@ public:
 	uint16 Age = 0;
 	uint16 GenomeSum = 0;
 	uint8 FeedType = 0;
+	uint8 Light = 0;
 
 	FVector2D accumulated_delta;
 

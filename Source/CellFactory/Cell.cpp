@@ -8,16 +8,9 @@
 
 UTexture2D * ACellActor::GenerateTexture(ELense lense) const
 {
-	UTexture2D * generated;
-	if (lense == ELense::Age)
-	{
-		generated = UTexture2D::CreateTransient(gSize.Y, 1);
-	}
-	else
-	{
-		generated = UTexture2D::CreateTransient(gSize.X, gSize.Y);
-	}
-	//generated->Filter = TextureFilter::TF_Nearest;
+	UTexture2D * generated = UTexture2D::CreateTransient(gSize.X, gSize.Y);
+
+	generated->Filter = TextureFilter::TF_Nearest;
 	generated->UpdateResource();
 
 	//if (mArray.Num() > 0)
@@ -30,7 +23,7 @@ UTexture2D * ACellActor::GenerateTexture(ELense lense) const
 		TArray<uint8> pData;
 		pData.SetNum(buffer_count);
 
-		static std::array<FColor, 6> colors = {FColor::Silver, FColor::Green, FColor::Blue, FColor::Purple, FColor::Red, FColor::Yellow};
+		static std::array<FColor, 6> colors = { FColor::Silver, FColor::Green, FColor::Blue, FColor::Purple, FColor::Red, FColor::Yellow };
 
 		for (int j = 0; j < buffer_count; j += 4)
 		{
@@ -46,13 +39,13 @@ UTexture2D * ACellActor::GenerateTexture(ELense lense) const
 			case ELense::Energy:
 				pData[j] = (mArray[j / 4].IsDead() && mArray[j / 4].Energy > 0) * 255;
 				pData[j + 1] = mArray[j / 4].IsDead() * 255;
-				pData[j + 2] = (FMath::Clamp(mArray[j / 4].Energy, 0.f, 100.f) / 100.f) * 255;
+				pData[j + 2] = (FMath::Clamp(FMath::Loge(mArray[j / 4].Energy), 0.f, 10.f)) * 25;
 				break;
-			case ELense::Age:
+			case ELense::Light:
 			{
-				pData[j] = GetChemo(IndexToCell(j / 4).Y) * 127;// *0.5f * 3.f + 1.f * 51; //B
-				pData[j + 1] = GetLight(IndexToCell(j / 4).Y) * 127; //G
-				pData[j + 2] = GetLight(IndexToCell(j / 4).Y) * 127; //R
+				pData[j] = mArray[j / 4].Light;// *0.5f * 3.f + 1.f * 51; //B
+				pData[j + 1] = 0; //G
+				pData[j + 2] = 0; //R
 			}
 			break;
 			case ELense::Genome:
@@ -123,16 +116,15 @@ void ACellActor::Tick(float DeltaSeconds)
 		++time_ticks;
 
 		auto updated = 0;
+		auto chemenergy = 0;
 
-		for (int32 j = 0; j < gSize.Y; ++j)
+		for (int32 i = 0; i < gSize.X; ++i)
 		{
-			auto photoenergy = GetLight(j);
-			auto chemenergy = GetChemo(j);
-			for (int32 i = 0; i < gSize.X; ++i)
+			uint8 photoenergy = 255;
+			for (int32 j = 0; j < gSize.Y; ++j)
 			{
 				auto self_index = CellToIndex({ i, j });
 
-				//if (!mArray[self_index].IsDead())
 				{
 					auto & cell = mArray[self_index];
 
@@ -155,7 +147,7 @@ void ACellActor::Tick(float DeltaSeconds)
 						const auto param2 = i_param2 / float(std::numeric_limits<GeneType>::max());
 
 						auto oldc = cell.Counter;
-						
+
 						switch (command1)
 						{
 						case EGene::MoveForward:
@@ -164,9 +156,10 @@ void ACellActor::Tick(float DeltaSeconds)
 							cell.Counter += 2;
 
 							auto new_index = CellToIndex(Vec2i(i, j) + gRotations[i_param1 % gRotationsCount]);
-							if (mArray[self_index].IsEmpty())
+							if (mArray[new_index].IsEmpty())
 							{
 								std::swap(mArray[self_index], mArray[new_index]);
+								std::swap(mArray[self_index].Light, mArray[new_index].Light);
 
 								self_index = new_index;
 								cell = mArray[new_index];
@@ -183,7 +176,7 @@ void ACellActor::Tick(float DeltaSeconds)
 
 						case EGene::Photo:
 						{
-							cell.Energy += photoenergy;
+							cell.Energy += photoenergy / float(SunMax);
 							cell.Counter += 1;
 							cell.FeedType = 1;
 						}
@@ -209,7 +202,7 @@ void ACellActor::Tick(float DeltaSeconds)
 									{
 										auto & ncell = mArray[n_index];
 										ncell.SetGenome(cell.Genome);
-										
+
 										Mutate(ncell, true);
 										ncell.Energy = cell.Energy * 0.5;
 										mArray[n_index] = ncell;
@@ -356,14 +349,14 @@ void ACellActor::Tick(float DeltaSeconds)
 						break;
 						}
 
-					//double_jump:
+						//double_jump:
 
 						if (oldc == cell.Counter)
 						{
 							++cell.Counter;
 						}
 
-						if (cell.Age > 100000 * param1)
+						if (cell.Age > 1000 * param1)
 						{
 							Mutate(cell, true);
 							cell.Age = 0;
@@ -371,26 +364,65 @@ void ACellActor::Tick(float DeltaSeconds)
 
 						cell.Age += 1;
 
-						//if (cell.Energy > 100 && rstream.RandHelper(100) == 1)
-						//{
-						//	//cell.Energy = 110;
-						//	cell.Genome[0] = EGene::Death;
-						//	//Mutate(cell, false);
-						//}
-
-						cell.Energy -= 0.005f;
+						cell.Light = photoenergy;
+						photoenergy = FMath::Clamp(photoenergy - 5, 0, 255);
 					}
 					else
 					{
-						cell.Energy -= 0.01f;
+						cell.Light = photoenergy;
+						photoenergy = FMath::Clamp(photoenergy - (cell.IsEmpty() ? 1 : 5), 0, 255);
 					}
 
-					cell.Energy *= .9f;
+					cell.Energy *= 0.95f;
+					cell.Energy -= 1;
 
-					if (cell.Energy < 1)
+					if (cell.Energy <= 1 && !cell.IsDead())
 					{
 						cell.Kill();
 						cell.Energy = 0;
+					}
+				}
+			}
+		}
+
+		for (int32 i = 0; i < gSize.X; ++i)
+		{
+			for (int32 j = gSize.Y - 1; j >= 0; --j)
+			{
+				auto self_index = CellToIndex({ i, j });
+
+				{
+					auto & cell = mArray[self_index];
+
+					if (cell.IsDead())
+					{
+						if (!cell.IsEmpty())
+						{
+							auto new_index = CellToIndex(Vec2i(i, j + 1));
+							if (mArray[new_index].IsEmpty())
+							{
+								std::swap(mArray[self_index], mArray[new_index]);
+								std::swap(mArray[self_index].Light, mArray[new_index].Light);
+							}
+							else
+							{
+								new_index = CellToIndex(Vec2i(i + 1, j + 1));
+								if (mArray[new_index].IsEmpty())
+								{
+									std::swap(mArray[self_index], mArray[new_index]);
+									std::swap(mArray[self_index].Light, mArray[new_index].Light);
+								}
+								else
+								{
+									new_index = CellToIndex(Vec2i(i - 1, j + 1));
+									if (mArray[new_index].IsEmpty())
+									{
+										std::swap(mArray[self_index], mArray[new_index]);
+										std::swap(mArray[self_index].Light, mArray[new_index].Light);
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -451,7 +483,7 @@ void ACellActor::Repopulate()
 		Cell ncell;
 		ncell.Energy = rstream.GetFraction() * 100;
 
-		for (int g = 0; g <gGenomeSize; ++g)
+		for (int g = 0; g < gGenomeSize; ++g)
 		{
 			ncell.Genome[g] = rstream.RandHelper(std::numeric_limits<GeneType>::max());
 		}
